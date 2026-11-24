@@ -1,0 +1,23 @@
+# Practice 9/10: deploy the website with Ansible. Run: ansible-playbook -i inventory.ini deploy-website.yml
+- hosts: web
+  become: true
+  vars: { app: /opt/medicore }
+  tasks:
+    - name: Packages present
+      ansible.builtin.dnf: { name: [nginx, docker, nodejs20], state: present }
+    - name: Ship frontend build
+      ansible.posix.synchronize: { src: ../../frontend/dist/, dest: "{{ app }}/frontend/dist/", delete: true }
+      notify: reload nginx
+    - name: Ship backend source
+      ansible.posix.synchronize: { src: ../../backend/src/, dest: "{{ app }}/backend/src/", delete: true }
+      notify: restart api
+    - name: Services running and enabled
+      ansible.builtin.service: { name: "{{ item }}", state: started, enabled: true }
+      loop: [docker, nginx, medicore, amazon-cloudwatch-agent]
+    - name: Site answers
+      ansible.builtin.uri: { url: http://localhost/api/health, status_code: 200 }
+      retries: 5
+      delay: 3
+  handlers:
+    - { name: reload nginx, ansible.builtin.service: { name: nginx, state: reloaded } }
+    - { name: restart api,  ansible.builtin.service: { name: medicore, state: restarted } }

@@ -1,0 +1,11 @@
+{ "start": "-PT1H", "widgets": [
+ {"type":"text","x":0,"y":0,"width":24,"height":2,"properties":{"markdown":"# MediCore - live monitoring\nEC2 `i-0123456789abcdef0` · refreshes every minute · http://<EC2_PUBLIC_IP>"}},
+ {"type":"metric","x":0,"y":2,"width":8,"height":6,"properties":{"title":"CPU % (1-min, agent)","region":"us-east-1","period":60,"stat":"Average","view":"timeSeries","yAxis":{"left":{"min":0,"max":100}},"metrics":[["MediCore","cpu_usage_active","InstanceId","i-0123456789abcdef0","cpu","cpu-total"]]}},
+ {"type":"metric","x":8,"y":2,"width":8,"height":6,"properties":{"title":"Memory used %","region":"us-east-1","period":60,"stat":"Average","view":"timeSeries","yAxis":{"left":{"min":0,"max":100}},"metrics":[["MediCore","mem_used_percent","InstanceId","i-0123456789abcdef0"]]}},
+ {"type":"metric","x":16,"y":2,"width":8,"height":6,"properties":{"title":"Disk used % (/)","region":"us-east-1","period":60,"stat":"Average","view":"gauge","yAxis":{"left":{"min":0,"max":100}},"metrics":[["MediCore","disk_used_percent","path","/","InstanceId","i-0123456789abcdef0","device","nvme0n1p1","fstype","xfs"]]}},
+ {"type":"metric","x":0,"y":8,"width":8,"height":6,"properties":{"title":"Network in/out (bytes)","region":"us-east-1","period":300,"stat":"Sum","view":"timeSeries","metrics":[["AWS/EC2","NetworkIn","InstanceId","i-0123456789abcdef0"],[".","NetworkOut",".","."]]}},
+ {"type":"metric","x":8,"y":8,"width":8,"height":6,"properties":{"title":"Status checks failed","region":"us-east-1","period":60,"stat":"Maximum","view":"timeSeries","metrics":[["AWS/EC2","StatusCheckFailed","InstanceId","i-0123456789abcdef0"]]}},
+ {"type":"alarm","x":16,"y":8,"width":8,"height":6,"properties":{"title":"Alarms","alarms":["arn:aws:cloudwatch:us-east-1:123456789012:alarm:MediCore-HighCPU"]}},
+ {"type":"log","x":0,"y":14,"width":12,"height":7,"properties":{"title":"nginx access log (live)","region":"us-east-1","view":"table","query":"SOURCE '/medicore/nginx-access' | fields @timestamp, @message | sort @timestamp desc | limit 20"}},
+ {"type":"log","x":12,"y":14,"width":12,"height":7,"properties":{"title":"API log (live)","region":"us-east-1","view":"table","query":"SOURCE '/medicore/api' | fields @timestamp, @message | sort @timestamp desc | limit 20"}}
+]}

@@ -1,0 +1,23 @@
+# Local MySQL for development. Start with: docker compose up -d --wait
+# Override with env vars or a root .env file (git-ignored).
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: medicore-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-medicore_dev}
+      MYSQL_DATABASE: medicore
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - medicore-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+volumes:
+  medicore-mysql-data:

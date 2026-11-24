@@ -1,0 +1,16 @@
+{
+  "name": "medicore",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MediCore Hospital Management System - convenience scripts for the backend and frontend",
+  "scripts": {
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "db:up": "docker compose up -d --wait",
+    "db:setup": "npm --prefix backend run db:setup",
+    "dev": "trap 'kill 0' INT TERM; npm run dev:backend & npm run dev:frontend & wait",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "test": "npm --prefix backend test"
+  }
+}

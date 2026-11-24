@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+  body {
+    @apply bg-[#f4f7fa] text-navy-900 font-sans;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  /* keyboard focus: one consistent ring on every interactive element */
+  :focus-visible { outline: 2px solid #17aa9e; outline-offset: 2px; border-radius: 6px; }
+  .dark-surface :focus-visible { outline-color: #72ddd0; }
+  h1, h2 { text-wrap: balance; }
+  ::selection { background: rgba(23,170,158,.25); }
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='datetime-local']::-webkit-calendar-picker-indicator { opacity: .5; cursor: pointer; }
+  /* slim scrollbars */
+  * { scrollbar-width: thin; scrollbar-color: #c5d6ec transparent; }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-thumb { background: #c5d6ec; border-radius: 8px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+}
+
+@layer components {
+  /* single-column grids must not grow past the viewport because of long unbreakable content */
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .card { @apply rounded-2xl bg-white border border-slate-200/80 shadow-soft; }
+  .card-hover { @apply transition-[border-color,box-shadow] duration-200 hover:border-teal-300 hover:shadow-lift; }
+  .input {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-navy-900 placeholder:text-slate-400
+      transition focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/15 disabled:bg-slate-50 disabled:text-slate-400;
+  }
+  .input-error { @apply border-rose-400 focus:border-rose-500 focus:ring-rose-500/15; }
+  .label { @apply mb-1.5 block text-[13px] font-semibold text-slate-600; }
+  .skeleton {
+    @apply rounded-lg bg-slate-200/70;
+    background-image: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent);
+    background-size: 400px 100%; background-repeat: no-repeat;
+    animation: shimmer 1.4s linear infinite;
+  }
+  .glass { @apply bg-white/10 backdrop-blur-md border border-white/15; }
+  .grid-pattern {
+    background-image: linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .num { font-variant-numeric: tabular-nums; }
+  .font-display { font-optical-sizing: auto; letter-spacing: -0.01em; }
+  .text-gradient { @apply bg-gradient-to-r from-teal-500 to-navy-600 bg-clip-text text-transparent; }
+  .thin-scroll { scrollbar-width: thin; }
+}
+
+/* tables collapse into labelled cards on narrow screens (see TableShell) */
+@media (max-width: 639px) {
+  .rtable { min-width: 0 !important; }
+  .rtable thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .rtable, .rtable tbody { display: block; }
+  .rtable tbody tr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; padding: 14px 16px; border-top: 1px solid #eef2f7; }
+  .rtable tbody tr:first-child { border-top: 0; }
+  .rtable tbody td { display: block; padding: 0 !important; min-width: 0; }
+  .rtable tbody td.hidden { display: block !important; }
+  .rtable tbody td[data-label] { padding-top: 6px !important; }
+  .rtable tbody td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 2px; font-size: 11px; font-weight: 600; color: #66768d; }
+  .rtable tbody td[data-primary], .rtable tbody td[data-wide] { grid-column: 1 / -1; }
+  .rtable tbody td[data-primary]::before { display: none; }
+  .rtable tbody td[data-actions] { grid-column: 1 / -1; padding-top: 8px !important; }
+  .rtable tbody td[data-actions]::before, .rtable tbody td[data-skip]::before { display: none; }
+  .rtable tbody td[data-skip] { display: none !important; }
+  .rtable tbody tr > td[colspan] { grid-column: 1 / -1; }
+}
+
+/* bed card tooltip pop */
+.bed-tip { opacity: 0; transform: translateY(6px) scale(.97); pointer-events: none; transition: all .18s ease; }
+.group:hover > .bed-tip, .group:focus-within > .bed-tip { opacity: 1; transform: translateY(0) scale(1); }
+/* hover summaries are useless on touch and overflow narrow screens; tapping a bed opens its actions instead */
+@media (max-width: 767px) { .bed-tip { display: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* Recharts tweaks */
+.recharts-wrapper:focus, .recharts-surface:focus { outline: none; }
+.recharts-text { font-family: 'Plus Jakarta Sans', sans-serif; }

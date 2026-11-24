@@ -1,0 +1,19 @@
+{
+  "agent": { "metrics_collection_interval": 60 },
+  "metrics": {
+    "namespace": "MediCore",
+    "append_dimensions": { "InstanceId": "${aws:InstanceId}" },
+    "metrics_collected": {
+      "cpu":  { "measurement": ["cpu_usage_active"], "totalcpu": true },
+      "mem":  { "measurement": ["mem_used_percent"] },
+      "disk": { "measurement": ["used_percent"], "resources": ["/"] }
+    }
+  },
+  "logs": {
+    "logs_collected": { "files": { "collect_list": [
+      { "file_path": "/var/log/nginx/access.log", "log_group_name": "/medicore/nginx-access", "retention_in_days": 7 },
+      { "file_path": "/var/log/nginx/error.log",  "log_group_name": "/medicore/nginx-error",  "retention_in_days": 7 },
+      { "file_path": "/var/log/medicore-api.log", "log_group_name": "/medicore/api",          "retention_in_days": 7 }
+    ] } }
+  }
+}
