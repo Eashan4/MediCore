@@ -2,6 +2,7 @@
  * MediCore database bootstrap.
  *   node ../database/setup.js            -> create database, tables and demo data (drops existing tables)
  *   node ../database/setup.js --schema   -> create database and tables only (no demo data)
+ *   node ../database/setup.js --if-empty -> do nothing when the schema already exists (safe to run on every start)
  *
  * Reads connection settings from backend/.env (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME).
  */
@@ -17,6 +18,7 @@ const bcrypt = req('bcryptjs');
 const seed = require('./seed');
 
 const schemaOnly = process.argv.includes('--schema');
+const ifEmpty = process.argv.includes('--if-empty');
 
 (async () => {
   const cfg = {
@@ -36,6 +38,14 @@ const schemaOnly = process.argv.includes('--schema');
 
   await conn.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
   await conn.query(`USE \`${dbName}\``);
+  if (ifEmpty) {
+    const [rows] = await conn.query("SHOW TABLES LIKE 'users'");
+    if (rows.length) {
+      console.log(`> Database "${dbName}" already initialised, nothing to do.`);
+      await conn.end();
+      return;
+    }
+  }
   console.log(`> Database "${dbName}" ready. Creating tables ...`);
   await conn.query(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
 

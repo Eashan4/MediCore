@@ -1,14 +1,40 @@
-# Practice 11: containerised stack (db + api + web). Run: DB_PASSWORD=... JWT_SECRET=... docker compose -f docker-compose.prod.yml up -d --build
+# Containerised stack: db + one-shot schema init + api + web.
+# Run: DB_PASSWORD=... JWT_SECRET=... docker compose -f docker-compose.prod.yml up -d --build
+# On first start the db-init service creates the schema and loads the demo data;
+# on later starts it detects the existing schema and exits without touching it.
 services:
   mysql:
     image: mysql:8.0
-    environment: { MYSQL_ROOT_PASSWORD: "${DB_PASSWORD:?set DB_PASSWORD}", MYSQL_DATABASE: medicore }
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD:?set DB_PASSWORD}"
+      MYSQL_DATABASE: medicore
     volumes: [db:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
     restart: unless-stopped
+  db-init:
+    build: { context: ., dockerfile: backend/Dockerfile }
+    command: ["node", "../database/setup.js", "--if-empty"]
+    environment:
+      DB_HOST: mysql
+      DB_PASSWORD: "${DB_PASSWORD}"
+    depends_on:
+      mysql: { condition: service_healthy }
+    restart: "no"
   api:
-    build: ./backend
-    environment: { NODE_ENV: production, DB_HOST: mysql, DB_PASSWORD: "${DB_PASSWORD}", JWT_SECRET: "${JWT_SECRET:?set JWT_SECRET}", CLIENT_ORIGIN: http://localhost }
-    depends_on: [mysql]
+    build: { context: ., dockerfile: backend/Dockerfile }
+    environment:
+      NODE_ENV: production
+      DB_HOST: mysql
+      DB_PASSWORD: "${DB_PASSWORD}"
+      JWT_SECRET: "${JWT_SECRET:?set JWT_SECRET}"
+      CLIENT_ORIGIN: http://localhost
+    depends_on:
+      db-init: { condition: service_completed_successfully }
     restart: unless-stopped
   web:
     build: ./frontend
