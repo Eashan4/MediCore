@@ -1,6 +1,55 @@
 # MediCore Hospital Management System
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white)](backend/)
+[![React](https://img.shields.io/badge/React-18-149ECA?logo=react&logoColor=white)](frontend/)
+[![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)](database/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](docker-compose.yml)
+
 MediCore is a full-stack hospital management system covering patients, appointments, bed and ward management, admissions, emergency intake, pharmacy stock, clinical records and a security audit trail. Access is role-based: every API route is protected by JWT authentication and an `authorize()` middleware, so permissions are enforced in the backend and not only hidden in the UI.
+
+<p align="center">
+  <img src="docs/screenshots/admin-dashboard.jpg" alt="MediCore admin dashboard with occupancy, admissions and emergency load" width="90%">
+</p>
+
+## Contents
+
+- [Screenshots](#screenshots) | [Architecture](#architecture) | [Features by role](#features-by-role) | [Tech stack](#tech-stack)
+- [Quick start](#quick-start) | [Run with Docker](#run-the-full-stack-with-docker) | [Demo credentials](#demo-credentials)
+- [Security notes](#security-notes) | [Cloud and DevOps](#cloud--devops-deployment) | [License](#license)
+
+## Screenshots
+
+All data shown is simulated demo data.
+
+<table>
+<tr>
+<td width="50%"><b>Bed management</b><br><img src="docs/screenshots/beds.jpg" alt="Ward-by-ward bed board"></td>
+<td width="50%"><b>Patient profile</b><br><img src="docs/screenshots/patient-profile.jpg" alt="Patient profile with admission, appointments and records"></td>
+</tr>
+<tr>
+<td width="50%"><b>Receptionist dashboard</b><br><img src="docs/screenshots/receptionist-dashboard.jpg" alt="Front-desk dashboard"></td>
+<td width="50%"><b>Clinical records (doctor)</b><br><img src="docs/screenshots/clinical.jpg" alt="Medical records and prescriptions"></td>
+</tr>
+<tr>
+<td width="50%"><b>Emergency queue</b><br><img src="docs/screenshots/emergency.jpg" alt="Emergency requests"></td>
+<td width="50%"><b>Mobile layout</b><br><img src="docs/screenshots/mobile-dashboard.jpg" alt="Dashboard on a phone-sized screen" width="240"></td>
+</tr>
+</table>
+
+## Architecture
+
+```mermaid
+flowchart LR
+  U[Browser: React + Vite SPA] -->|/api, JWT| A[Express API]
+  A --> M[authenticate and authorize by role]
+  M --> R[Route handlers + zod validation]
+  R --> D[(MySQL 8)]
+  R --> L[Audit log writer]
+  L --> D
+```
+
+In production the SPA is served by nginx, which proxies `/api` to the Express API; MySQL runs next to it (container or local).
 
 ## Features by role
 
@@ -53,7 +102,7 @@ npm run db:setup                       # create database, tables and demo data
 npm run dev                            # API on :5000 and frontend on :5173
 ```
 
-`npm run dev` runs the backend and the frontend in one terminal using a POSIX shell (macOS, Linux, WSL, Git Bash). On plain Windows, run `npm run dev:backend` and `npm run dev:frontend` in two terminals. Other root scripts: `npm run build` (production build of the frontend into `frontend/dist`) and `npm test` (runs `npm test` in `backend/`; the backend does not define a test script yet).
+`npm run dev` runs the backend and the frontend in one terminal using a POSIX shell (macOS, Linux, WSL, Git Bash). On plain Windows, run `npm run dev:backend` and `npm run dev:frontend` in two terminals. Other root scripts: `npm run build` (production build of the frontend into `frontend/dist`) and `npm test` (runs the backend integration tests in `backend/tests/`, which need the MySQL database from `backend/.env` to be running and seeded).
 
 ## Project structure
 
@@ -76,6 +125,11 @@ medicore/
 │   ├── schema.sql            # tables, keys, constraints
 │   ├── seed.js               # demo data
 │   └── setup.js              # creates DB, applies schema, seeds data
+├── deploy/                   # AWS CLI, Terraform, Ansible, CloudWatch, Kubernetes
+├── docs/screenshots/         # README images
+├── docker-compose.yml        # local MySQL
+├── docker-compose.prod.yml   # db + schema init + api + web
+├── Jenkinsfile
 └── frontend/
     ├── vite.config.js        # dev server on 5173, /api proxy
     └── src/
@@ -148,7 +202,7 @@ From the repository root: `npm run install:all`, `npm run db:up`, `npm run db:se
 | Doctor | doctor@medicore.com | Doctor@123 |
 | Receptionist | reception@medicore.com | Reception@123 |
 
-These are demo accounts for local use only. Change or remove them before any real deployment.
+> **Demo only.** These accounts are created by `npm run db:setup` on a throwaway local database and use well-known passwords that are also printed in this README and the tests. Never expose a deployment seeded with them to the internet; delete or change these users first.
 
 ## Role permission matrix
 
@@ -253,27 +307,35 @@ Doctor, patient and staff photos are hotlinked from Unsplash and randomuser.me, 
 - **Broken or modified demo data**: run `npm run db:setup` again from `backend/` to drop and reseed everything.
 - **"Too many login attempts"**: wait out the 15-minute rate-limit window or restart the API.
 
-## Not included yet
+## Run the full stack with Docker
 
-AWS, Jenkins, Kubernetes, Terraform and Ansible are intentionally not included yet. Docker is used only for the local development database (`docker-compose.yml`); the app itself is not containerised. Deployment and infrastructure tooling will be added later.
+`docker-compose.prod.yml` starts MySQL, a one-shot `db-init` job, the API and the nginx-served frontend. On first start `db-init` creates the schema and loads the demo data; on later starts it detects the existing schema and exits without touching it.
+
+```bash
+DB_PASSWORD=choose-a-password JWT_SECRET=$(openssl rand -hex 32) \
+  docker compose -f docker-compose.prod.yml up -d --build
+# open http://localhost
+```
+
+Remember the demo-credentials warning above if you expose this beyond your machine.
 
 ## Cloud & DevOps deployment
 
-Live at the EC2 public IP (see `deploy/`). Everything below lives in `deploy/` unless noted.
+Course-lab tooling that lives in `deploy/` and the repository root. Account-specific values (instance IDs, addresses, bucket names, key names) are placeholders; copy `deploy/ansible/inventory.ini.example` to `inventory.ini` (git-ignored) and fill in your own.
 
-| Course topic | Where | Status |
+| Topic | Where | Status |
 |---|---|---|
-| EC2 instance, EBS volume, security group | `deploy/aws-cli/create-infra.sh` (t3.micro, 20 GB gp3) | Deployed |
-| S3 bucket (code bundle + nightly MySQL dump) | same script, cron in `deploy/userdata.sh` | Deployed |
-| AWS CLI infrastructure creation | `deploy/aws-cli/create-infra.sh` | Used to build the live stack |
-| Linux commands / shell-script automation | `deploy/userdata.sh` (swap, services, cron, nginx) | Deployed |
-| CloudWatch: agent, log groups, alarms, dashboard | `deploy/cloudwatch/` (`MediCore-Live` dashboard, CPU + memory alarms) | Deployed |
-| Ansible website deployment | `deploy/ansible/deploy-website.yml` | Run against the live server |
-| Docker | `backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.prod.yml`; MySQL runs in Docker on the server | MySQL live; app images authored, not built yet |
-| Terraform | `deploy/terraform/main.tf` | Authored, not applied/validated |
-| Kubernetes Pod YAML | `deploy/k8s/medicore-pod.yaml` | Authored (YAML-valid), no cluster |
-| CI/CD + DevSecOps (secrets scan, `npm audit`) | `Jenkinsfile` | Authored, no Jenkins server |
-| IAM | Instance uses the lab's `LabInstanceProfile` for S3/CloudWatch | Lab role only |
+| EC2 instance, EBS volume, security group, S3 bucket | `deploy/aws-cli/create-infra.sh` (t3.micro, 20 GB gp3; set `KEY_NAME`, optionally `SSH_CIDR`) | Used to build the lab stack |
+| Server bootstrap: swap, MySQL in Docker, systemd, nginx, nightly dump to S3 | `deploy/userdata.sh` | Used on the lab stack |
+| CloudWatch agent, alarms, dashboard | `deploy/cloudwatch/` | Used on the lab stack; dashboard JSON uses placeholder IDs |
+| Ansible website deployment | `deploy/ansible/deploy-website.yml` | Used on the lab stack |
+| Docker images and Compose | `backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.prod.yml` | Authored; image build not verified in this repository |
+| Terraform | `deploy/terraform/main.tf` | Authored; not applied or validated |
+| Kubernetes Pod and Service | `deploy/k8s/medicore-pod.yaml` | Authored; no cluster used |
+| CI/CD and DevSecOps (secrets scan, `npm audit`) | `Jenkinsfile` | Authored; no Jenkins server used |
 
-Update the live site: `cd deploy/ansible && ansible-playbook -i inventory.ini deploy-website.yml`.
-Publish the dashboard: `aws cloudwatch put-dashboard --dashboard-name MediCore-Live --dashboard-body file://deploy/cloudwatch/dashboard.json`.
+Update a deployed site: `cd deploy/ansible && ansible-playbook -i inventory.ini deploy-website.yml`. Publish the dashboard: `aws cloudwatch put-dashboard --dashboard-name MediCore-Live --dashboard-body file://deploy/cloudwatch/dashboard.json` (replace the placeholder instance ID and account ID first).
+
+## License
+
+Released under the [MIT License](LICENSE).
